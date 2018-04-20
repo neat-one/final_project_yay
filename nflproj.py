@@ -190,12 +190,30 @@ def insert_data2():
 
 class MoreInfo:
     def __init__(self, title):
-        dict_movie = getOMDBData(title)
-        self.plot = dict_movie['Plot']
-        self.release_date = dict_movie['Released']
-        self.genre = dict_movie['Genre']
-        self.director = dict_movie['Director']
-        self.actors = dict_movie['Actors']
+        try:
+            dict_movie = getOMDBData(title)
+        except:
+            print('No data given on that movie.')
+        try:
+            self.plot = dict_movie['Plot']
+        except:
+            self.plot = 'No plot given.'
+        try:
+            self.release_date = dict_movie['Released']
+        except:
+            self.release_date = 'No release date given.'
+        try:
+            self.genre = dict_movie['Genre']
+        except:
+            self.genre = 'No genre given.'
+        try:
+            self.director = dict_movie['Director']
+        except:
+            self.director = 'No director given.'
+        try:
+            self.actors = dict_movie['Actors']
+        except:
+            self.actors = 'No actors given.'
 
 def interactive(top_movies):
     counter = 0
@@ -218,9 +236,9 @@ def interactive(top_movies):
             if user_input3 == 'exit':
                 break
         elif user_input2 == 'graphs':
-            graph_object = input('Would you like to see a graph of runtimes or ratings? ')
+            graph_object = input('Would you like to see a graph of runtimes, comments, or ratings? ')
             if graph_object == 'runtimes':
-                run_type = input('Would you like to compare 2 runtimes or see a distribution of all runtimes? Type "compare" or "distribution". ')
+                run_type = input('Would you like to compare 2 runtimes? Type "compare". ')
                 if run_type == 'compare':
                     for x in top_movies:
                         print(x)
@@ -263,7 +281,10 @@ def interactive(top_movies):
                                 pass
                             else:
                                 run_time2 += x
-                        run_time2 = int(run_time2)
+                        try:
+                            run_time2 = int(run_time2)
+                        except:
+                            run_time2 = run_time2
                         conn.close()
                         trace1 = go.Bar(
                         x = [graph_variable1],
@@ -297,60 +318,6 @@ def interactive(top_movies):
                     else:
                         print('You did not enter a title in the list, please start again. ')
                         continue
-                elif run_type == 'distribution':
-                    counter = 0
-                    for x in top_movies:
-                        conn=sqlite3.connect(DBNAME)
-                        cur=conn.cursor()
-                        statement = '''
-                            SELECT Runtime
-                            FROM Movies
-                            WHERE Title = (?)
-                        '''
-                        cur.execute(statement, (x,))
-                        run1 = ''
-                        for row in cur:
-                            run1 = row[0]
-                        run_time1 = ''
-                        data = []
-                        for x in run1:
-                            if x.isalpha() == True:
-                                pass
-                            else:
-                                run_time1 += x
-                        try:
-                            run_time1 = int(run_time1)
-                        except:
-                            run_time1 = run_time1
-
-                        conn.close()
-
-                        trace1 = go.Bar(
-                        x = [top_movies[counter]],
-                        y = run_time1,
-                        name = top_movies[counter]
-                        )
-                        data += [trace1]
-                        counter += 1
-                    layout = go.Layout(
-                        barmode ='group',
-                        title = 'Ratings for all Movies',
-                        xaxis=dict(
-                    title = 'Title',
-                    titlefont=dict(
-                        family='Courier New, monospace',
-                        size=18,
-                        color='#7f7f7f'
-                    )), yaxis=dict(
-                    title = 'Minutes',
-                    titlefont=dict(
-                        family='Courier New, monospace',
-                        size=18,
-                        color='#7f7f7f')))
-                    fig = go.Figure(data=data, layout=layout)
-                    py.plot(fig, filename='grouped-bar')
-
-                    continue
                 else:
                     print('Please try again and enter a valid command. ')
                     continue
@@ -472,13 +439,85 @@ def interactive(top_movies):
                     else:
                         print('You did not enter a title in the list, please start again. ')
                         continue
+            elif graph_object == 'comments':
+                for x in top_movies:
+                    print(x)
+                graph_variable1 = input('Choose the first movie to compare. ')
+                graph_variable2 = input('Choose the second movie to compare. ')
+                if graph_variable1 in top_movies and graph_variable2 in top_movies:
+                    conn=sqlite3.connect(DBNAME)
+                    cur=conn.cursor()
+                    statement = '''
+                        SELECT Comments
+                        FROM Details
+                            JOIN Movies
+                            ON Movies.Id = Details.MovieID
+                        WHERE Movies.Title = (?)
+                    '''
+                    graph_variable_end1 = graph_variable1
+                    cur.execute(statement, (graph_variable_end1,))
+                    run1 = ''
+                    for row in cur:
+                        rating1 = row[0]
+
+                    statement = '''
+                        SELECT Comments
+                        FROM Details
+                            JOIN Movies
+                            ON Movies.Id = Details.MovieID
+                        WHERE Movies.Title = (?)
+                    '''
+                    graph_variable_end2 = graph_variable2
+                    cur.execute(statement, (graph_variable_end2,))
+                    run2 = ''
+                    for row in cur:
+                        run2 = row[0]
+                    run_time2 = run2
+                    #run_time2 = int(run_time2)
+                    conn.close()
+                    trace1 = go.Bar(
+                    x = [graph_variable1],
+                    y = rating1,
+                    name = graph_variable1
+                    )
+                    trace2 = go.Bar(
+                        x=[graph_variable2],
+                        y= run_time2,
+                        name = graph_variable2
+                    )
+                    data = [trace1, trace2]
+                    layout = go.Layout(
+                        barmode ='group',
+                        title = 'DeviantArt Comments',
+                        xaxis=dict(
+                    title = 'Title',
+                    titlefont=dict(
+                        family='Courier New, monospace',
+                        size=18,
+                        color='#7f7f7f'
+                    )), yaxis=dict(
+                    title = 'Number of Comments',
+                    titlefont=dict(
+                        family='Courier New, monospace',
+                        size=18,
+                        color='#7f7f7f')))
+                    fig = go.Figure(data=data, layout=layout)
+                    py.plot(fig, filename='grouped-bar')
+
+                else:
+                    print('You did not enter a title in the list, please start again. ')
+                    continue
+
+            else:
+                print('Start over and try again. Use only commands in the info list.')
+                continue
         elif user_input2 == 'more':
             movie_name = input('Please enter a title to get more info about. ')
-            #try:
-            name = MoreInfo(movie_name)
-            # except:
-            #     print('That is not a valid title. Please start again.')
-            #     continue
+            try:
+                name = MoreInfo(movie_name)
+            except:
+                print('That is not a valid title. Please start again.')
+                continue
             data_list = ['plot', 'release date', 'genre', 'director', 'actors']
             print('Info Types:')
             counting = 1
